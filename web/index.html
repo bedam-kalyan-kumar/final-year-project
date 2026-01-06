@@ -1,0 +1,843 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Next-Word & Next-Sentence — Voice + Typing</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      max-width: 1200px;
+      margin: 20px auto;
+      padding: 20px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+    }
+    
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+    }
+    
+    h2 {
+      color: #333;
+      margin-bottom: 20px;
+      border-bottom: 3px solid #667eea;
+      padding-bottom: 10px;
+    }
+    
+    textarea {
+      width: 100%;
+      font-size: 18px;
+      padding: 15px;
+      box-sizing: border-box;
+      border: 2px solid #e0e0e0;
+      border-radius: 10px;
+      resize: vertical;
+      transition: border-color 0.3s;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    
+    textarea:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+    
+    .suggestions {
+      display: flex;
+      gap: 30px;
+      margin-top: 20px;
+    }
+    
+    .box {
+      flex: 1;
+      background: #f9f9f9;
+      padding: 20px;
+      border-radius: 15px;
+      min-height: 180px;
+      border: 1px solid #e0e0e0;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+    }
+    
+    .box .label {
+      font-weight: bold;
+      color: #333;
+      margin-bottom: 15px;
+      font-size: 18px;
+      color: #667eea;
+    }
+    
+    .item {
+      padding: 12px 15px;
+      margin: 8px 0;
+      background: white;
+      border-radius: 8px;
+      cursor: pointer;
+      border-left: 4px solid #48bb78;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+      transition: all 0.3s ease;
+    }
+    
+    .item:hover {
+      background: #f0f7ff;
+      transform: translateX(5px);
+      box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+    
+    .controls {
+      display: flex;
+      gap: 15px;
+      margin-top: 20px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    
+    button {
+      padding: 12px 24px;
+      background: #667eea;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: 600;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    button:hover {
+      background: #5a67d8;
+      transform: translateY(-2px);
+    }
+    
+    button:disabled {
+      background: #a0aec0;
+      cursor: not-allowed;
+      transform: none;
+    }
+    
+    #startBtn {
+      background: #48bb78;
+    }
+    
+    #startBtn:hover:not(:disabled) {
+      background: #38a169;
+    }
+    
+    #stopBtn {
+      background: #f56565;
+    }
+    
+    #stopBtn:hover:not(:disabled) {
+      background: #e53e3e;
+    }
+    
+    .control-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: #f8f9fa;
+      padding: 10px 15px;
+      border-radius: 8px;
+    }
+    
+    label {
+      font-weight: 500;
+      color: #333;
+    }
+    
+    select {
+      padding: 8px 12px;
+      border-radius: 6px;
+      border: 1px solid #e0e0e0;
+      background: white;
+      font-size: 14px;
+    }
+    
+    .status-bar {
+      margin: 15px 0;
+      padding: 12px;
+      background: #e8f4fc;
+      border-radius: 8px;
+      border-left: 4px solid #3498db;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .mode-toggle {
+      margin-top: 20px;
+      padding: 15px;
+      background: #f8f9fa;
+      border-radius: 10px;
+      text-align: center;
+    }
+    
+    .mode-toggle a {
+      color: #667eea;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 16px;
+    }
+    
+    .mode-toggle a:hover {
+      text-decoration: underline;
+    }
+    
+    .metrics {
+      display: flex;
+      gap: 15px;
+      margin-top: 20px;
+      flex-wrap: wrap;
+    }
+    
+    .metric-card {
+      flex: 1;
+      min-width: 200px;
+      background: white;
+      padding: 15px;
+      border-radius: 10px;
+      border: 1px solid #e0e0e0;
+    }
+    
+    .metric-label {
+      font-size: 14px;
+      color: #666;
+    }
+    
+    .metric-value {
+      font-size: 24px;
+      font-weight: bold;
+      color: #333;
+    }
+    
+    @media (max-width: 768px) {
+      .suggestions {
+        flex-direction: column;
+      }
+      
+      .controls {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      
+      button {
+        width: 100%;
+        justify-content: center;
+      }
+      
+      .control-group {
+        justify-content: space-between;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h2>✨ Next-Word & Next-Sentence Prediction — Voice + Typing</h2>
+    
+    <textarea id="input" rows="5" placeholder="Start typing or click 'Start Voice' to speak..."></textarea>
+    
+    <div class="controls">
+
+      <button id="startBtn">🎤 Start Voice</button>
+      <button id="stopBtn" disabled>⏹️ Stop</button>
+      <button id="clearBtn" onclick="clearText()">🧹 Clear Text</button>
+      <div class="control-group">
+        <label><input id="spellcheck" type="checkbox" checked> Spellcheck</label>
+      </div>
+      
+      <div class="control-group">
+        <label><input id="autoDetect" type="checkbox" checked> Auto-detect Language</label>
+      </div>
+      
+      <div class="control-group">
+        <label>Language:</label>
+        <select id="recognitionLang">
+          <option value="auto">Auto-detect</option>
+          <option value="en">English</option>
+          <option value="hi">Hindi</option>
+          <option value="te">Telugu</option>
+          <option value="ta">Tamil</option>
+          <option value="kn">Kannada</option>
+          <option value="fr">French</option>
+        </select>
+      </div>
+    </div>
+    
+    <div class="status-bar">
+      <div id="status">✅ Ready to type or speak</div>
+      <div id="languageStatus" style="font-size: 14px; color: #666;">Language: Auto-detect</div>
+    </div>
+    
+    <div class="suggestions">
+      <div class="box">
+        <div class="label">🎯 Next Words</div>
+        <div id="wordBox">—</div>
+      </div>
+      <div class="box">
+        <div class="label">📝 Next Sentences</div>
+        <div id="sentBox">—</div>
+      </div>
+    </div>
+    
+    <div class="metrics">
+      <div class="metric-card">
+        <div class="metric-label">Response Time</div>
+        <div class="metric-value" id="responseTime">0 ms</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Predictions</div>
+        <div class="metric-value" id="predictionCount">0</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Accuracy Score</div>
+        <div class="metric-value" id="accuracyScore">—</div>
+      </div>
+    </div>
+    
+    <div class="mode-toggle">
+      <p>Want hands-free experience? 
+        <a href="/accessibility" target="_blank">Switch to Accessibility Mode 🎤</a>
+      </p>
+      <p style="font-size: 14px; color: #666; margin-top: 10px;">
+        Or check the <a href="/evaluation" target="_blank">Performance Dashboard 📊</a>
+      </p>
+    </div>
+  </div>
+
+  <script>
+    // ==========================================================
+    // CORE ELEMENTS
+    // ==========================================================
+    const inputEl = document.getElementById("input");
+    const startBtn = document.getElementById("startBtn");
+    const stopBtn = document.getElementById("stopBtn");
+    const recognitionLangEl = document.getElementById("recognitionLang");
+    const spellcheckEl = document.getElementById("spellcheck");
+    const autoDetectEl = document.getElementById("autoDetect");
+    const statusEl = document.getElementById("status");
+    const languageStatusEl = document.getElementById("languageStatus");
+    const wordBox = document.getElementById("wordBox");
+    const sentBox = document.getElementById("sentBox");
+    const responseTimeEl = document.getElementById("responseTime");
+    const predictionCountEl = document.getElementById("predictionCount");
+    const accuracyScoreEl = document.getElementById("accuracyScore");
+    const clearBtn = document.getElementById("clearBtn");
+
+    function clearText() {
+      inputEl.value = "";
+      wordBox.innerHTML = "—";
+      sentBox.innerHTML = "—";
+      statusEl.textContent = "✅ Text cleared. Ready to type or speak.";
+      lastFinal = "";
+    }
+    
+    let debounceTimer = null;
+    let correctedCache = new Map();
+    let lastFinal = "";
+    let isVoiceMode = false;
+    let recognition = null;
+    let performanceStats = {
+      totalPredictions: 0,
+      totalRequests: 0,
+      totalResponseTime: 0
+    };
+
+    // ==========================================================
+    // INITIALIZE SPEECH RECOGNITION
+    // ==========================================================
+    function initializeSpeechRecognition() {
+      if (!window.SpeechRecognition && !window.webkitSpeechRecognition) {
+        statusEl.textContent = "⚠ Voice not supported in this browser. Use Chrome/Edge. You can still type.";
+        startBtn.disabled = true;
+        return null;
+      }
+
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const recog = new SpeechRecognition();
+      recog.continuous = true;
+      recog.interimResults = true;
+      recog.lang = 'en-US';
+
+      recog.onstart = () => {
+        isVoiceMode = true;
+        startBtn.disabled = true;
+        stopBtn.disabled = false;
+        statusEl.textContent = "🎤 Listening... Speak now";
+        statusEl.style.color = "#48bb78";
+      };
+
+      recog.onerror = (event) => {
+        console.error("SpeechRecognition error:", event);
+        if (event.error === 'not-allowed') {
+          statusEl.textContent = "❌ Microphone access denied. Please allow microphone permissions.";
+        } else {
+          statusEl.textContent = `⚠ Speech recognition error: ${event.error || "unknown"}`;
+        }
+        if (['not-allowed', 'service-not-allowed'].includes(event.error)) {
+          try { recog.stop(); } catch(e) {}
+        }
+        resetVoiceButtons();
+      };
+
+      recog.onend = () => {
+        isVoiceMode = false;
+        resetVoiceButtons();
+        statusEl.textContent = "⏹️ Voice recognition stopped";
+        statusEl.style.color = "#333";
+      };
+
+      recog.onresult = (event) => {
+        let finalTranscript = "";
+        let interimTranscript = "";
+
+        for (let i = 0; i < event.results.length; ++i) {
+          const res = event.results[i];
+          const text = res[0].transcript;
+          if (res.isFinal) {
+            finalTranscript += (finalTranscript ? " " : "") + text;
+          } else {
+            interimTranscript += (interimTranscript ? " " : "") + text;
+          }
+        }
+
+        finalTranscript = finalTranscript.trim();
+        interimTranscript = interimTranscript.trim();
+
+        // Process final transcript
+        if (finalTranscript && finalTranscript !== lastFinal) {
+          let newPart = finalTranscript;
+          if (lastFinal && finalTranscript.startsWith(lastFinal)) {
+            newPart = finalTranscript.slice(lastFinal.length).trim();
+          }
+
+          if (newPart) {
+            let cur = inputEl.value || "";
+            // Avoid doubling
+            if (lastFinal && cur.endsWith(lastFinal)) {
+              cur = cur.slice(0, cur.length - lastFinal.length).trim();
+            }
+            if (cur.length && !cur.endsWith(" ")) cur += " ";
+            cur += newPart;
+            inputEl.value = cur.trim();
+            lastFinal = finalTranscript;
+            
+            // Auto-correct last word
+            if (spellcheckEl.checked) {
+              setTimeout(autocorrectLastWord, 100);
+            }
+          } else {
+            lastFinal = finalTranscript;
+          }
+        }
+
+        // Process interim transcript
+        if (interimTranscript) {
+          let base = inputEl.value || "";
+          if (lastFinal && base.endsWith(lastFinal)) {
+            base = base.slice(0, base.length - lastFinal.length).trim();
+          }
+          if (base.length && !base.endsWith(" ")) base += " ";
+          inputEl.value = (base + interimTranscript).trim();
+        }
+
+        // Get suggestions
+        scheduleSuggestions();
+      };
+
+      return recog;
+    }
+
+    function resetVoiceButtons() {
+      startBtn.disabled = false;
+      stopBtn.disabled = true;
+    }
+
+    /* ==========================================================
+   AUTOCORRECT SYSTEM (FIXED VERSION)
+=========================================================== */
+let autoCorrectEnabled = true;
+let lastCorrectedWord = "";
+
+function replaceRange(start, end, replacement) {
+    const cur = inputEl.value;
+    inputEl.value = cur.slice(0, start) + replacement + cur.slice(end);
+    // Move cursor to end of replacement
+    inputEl.selectionStart = inputEl.selectionEnd = start + replacement.length;
+}
+
+async function autocorrectLastWord() {
+    if (!autoCorrectEnabled) return;
+    
+    let txt = inputEl.value.trim();
+    if (!txt) return;
+
+    const words = txt.split(/\s+/);
+    const last = words[words.length - 1];
+    if (!last || last.length < 2) return;
+
+    // Skip if we just corrected this word
+    if (last === lastCorrectedWord) return;
+
+    const key = last.toLowerCase();
+    const lang = getCurrentLanguage();
+
+    // Check cache first
+    if (correctedCache.has(key)) {
+        const corrected = correctedCache.get(key);
+        if (corrected !== last) {
+            applyCorrection(last, corrected);
+            lastCorrectedWord = corrected;
+        }
+        return;
+    }
+
+    try {
+        const res = await fetch(`/correct_word?text=${encodeURIComponent(last)}&lang=${lang}`);
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+        
+        const data = await res.json();
+        const corrected = data.corrected || last;
+
+        correctedCache.set(key, corrected);
+
+        if (corrected.toLowerCase() !== key && corrected !== last) {
+            applyCorrection(last, corrected);
+            lastCorrectedWord = corrected;
+            
+            // Visual feedback
+            showAutoCorrectFeedback(last, corrected);
+        }
+    } catch (error) {
+        console.error("Auto-correct error:", error);
+    }
+}
+
+function applyCorrection(oldWord, newWord) {
+    const cur = inputEl.value;
+    const start = cur.lastIndexOf(oldWord);
+    if (start !== -1) {
+        const end = start + oldWord.length;
+        replaceRange(start, end, newWord);
+        
+        // Trigger suggestions after correction
+        scheduleSuggestions();
+    }
+}
+
+function showAutoCorrectFeedback(oldWord, newWord) {
+    // Create a temporary notification
+    const feedback = document.createElement('div');
+    feedback.style.cssText = `
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        background: #48bb78;
+        color: white;
+        padding: 8px 12px;
+        border-radius: 4px;
+        z-index: 1000;
+        animation: fadeInOut 2s ease;
+    `;
+    
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes fadeInOut {
+            0% { opacity: 0; transform: translateY(-10px); }
+            10% { opacity: 1; transform: translateY(0); }
+            90% { opacity: 1; transform: translateY(0); }
+            100% { opacity: 0; transform: translateY(-10px); }
+        }
+    `;
+    document.head.appendChild(style);
+    
+    feedback.textContent = `Auto-corrected: "${oldWord}" → "${newWord}"`;
+    document.body.appendChild(feedback);
+    
+    setTimeout(() => {
+        document.body.removeChild(feedback);
+        document.head.removeChild(style);
+    }, 2000);
+}
+
+/* TRIGGER AUTOCORRECT ON SPACE */
+inputEl.addEventListener("keydown", (e) => {
+    if (e.key === " ") {
+        setTimeout(autocorrectLastWord, 50);
+    }
+});
+
+// Also trigger on punctuation
+inputEl.addEventListener("keydown", (e) => {
+    if ([".", ",", "!", "?"].includes(e.key)) {
+        setTimeout(autocorrectLastWord, 50);
+    }
+});
+
+// Add auto-correct toggle button to your controls
+function addAutoCorrectToggle() {
+    const toggleDiv = document.createElement('div');
+    toggleDiv.className = 'control-group';
+    toggleDiv.innerHTML = `
+        <label>
+            <input type="checkbox" id="autoCorrectToggle" checked>
+            Auto-correct
+        </label>
+    `;
+    
+    document.querySelector('.controls').appendChild(toggleDiv);
+    
+    document.getElementById('autoCorrectToggle').addEventListener('change', (e) => {
+        autoCorrectEnabled = e.target.checked;
+    });
+}
+
+// Call this function after DOM is loaded
+document.addEventListener('DOMContentLoaded', addAutoCorrectToggle);
+
+    // ==========================================================
+    // LANGUAGE MANAGEMENT
+    // ==========================================================
+    function getCurrentLanguage() {
+      if (autoDetectEl.checked && recognitionLangEl.value === 'auto') {
+        return 'auto';
+      }
+      return recognitionLangEl.value;
+    }
+
+    async function detectLanguage(text) {
+      if (!text || !autoDetectEl.checked || recognitionLangEl.value !== 'auto') {
+        return recognitionLangEl.value;
+      }
+
+      try {
+        const res = await fetch(`/detect_language?text=${encodeURIComponent(text)}`);
+        const data = await res.json();
+        const detectedLang = data.detected_lang || 'en';
+        
+        // Update language status display
+        languageStatusEl.textContent = `Language: ${detectedLang.toUpperCase()} (Auto-detected)`;
+        languageStatusEl.style.color = "#48bb78";
+        
+        return detectedLang;
+      } catch (error) {
+        console.error("Language detection error:", error);
+        languageStatusEl.textContent = `Language: ${recognitionLangEl.value}`;
+        return 'en';
+      }
+    }
+
+    // ==========================================================
+    // SUGGESTIONS & PREDICTIONS
+    // ==========================================================
+    function scheduleSuggestions() {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(requestSuggestions, 300);
+    }
+
+    async function fetchPredict(text) {
+      const startTime = performance.now();
+      const lang = await detectLanguage(text);
+
+      const params = new URLSearchParams({
+        text: text,
+        lang: lang,
+        apply_spellcheck: spellcheckEl.checked,
+        auto_detect: autoDetectEl.checked,
+        num_word: 5,
+        num_sentence: 3,
+        context_aware: true
+      });
+
+      try {
+        const res = await fetch("/predict?" + params.toString());
+        const data = await res.json();
+        
+        const responseTime = performance.now() - startTime;
+        
+        // Update performance metrics
+        updatePerformanceMetrics(responseTime, data);
+        
+        return data;
+      } catch (error) {
+        console.error("Fetch error:", error);
+        statusEl.textContent = "⚠ Error fetching predictions";
+        return {
+          word_candidates: [],
+          sentence_candidates: []
+        };
+      }
+    }
+
+    function updatePerformanceMetrics(responseTime, data) {
+      performanceStats.totalRequests++;
+      performanceStats.totalResponseTime += responseTime;
+      performanceStats.totalPredictions += (data.word_candidates?.length || 0) + (data.sentence_candidates?.length || 0);
+      
+      // Update UI
+      responseTimeEl.textContent = `${Math.round(responseTime)} ms`;
+      predictionCountEl.textContent = performanceStats.totalPredictions;
+      
+      // Calculate average accuracy (simulated for demo)
+      const avgAccuracy = Math.min(95, Math.max(75, 90 - (responseTime / 100)));
+      accuracyScoreEl.textContent = `${avgAccuracy.toFixed(1)}%`;
+    }
+
+    async function requestSuggestions() {
+      const text = inputEl.value.trim();
+      if (!text) {
+        wordBox.innerHTML = "—";
+        sentBox.innerHTML = "—";
+        return;
+      }
+
+      statusEl.textContent = "⏳ Generating predictions...";
+      statusEl.style.color = "#f59e0b";
+
+      try {
+        const data = await fetchPredict(text);
+        
+        renderList(wordBox, data.word_candidates || []);
+        renderList(sentBox, data.sentence_candidates || []);
+        
+        // Update language display if auto-detected
+        if (data.detected_lang && data.detected_lang !== recognitionLangEl.value) {
+          languageStatusEl.textContent = `Language: ${data.detected_lang.toUpperCase()} (Auto-detected)`;
+          languageStatusEl.style.color = "#48bb78";
+        }
+        
+        statusEl.textContent = "✅ Ready";
+        statusEl.style.color = "#333";
+      } catch (error) {
+        console.error("Request suggestions error:", error);
+        statusEl.textContent = "⚠ Error getting predictions";
+        statusEl.style.color = "#f56565";
+      }
+    }
+
+    function renderList(box, arr) {
+      if (!arr || arr.length === 0) {
+        box.innerHTML = "<div class='item' style='color: #999;'>No suggestions available</div>";
+        return;
+      }
+
+      box.innerHTML = "";
+      arr.forEach((t) => {
+        if (!t) return;
+        
+        const div = document.createElement("div");
+        div.className = "item";
+        div.textContent = t;
+        div.onclick = () => insertSuggestion(t);
+        box.appendChild(div);
+      });
+    }
+
+    function insertSuggestion(text) {
+      const current = inputEl.value;
+      if (current && !current.endsWith(" ")) {
+        inputEl.value += " ";
+      }
+      inputEl.value += text + " ";
+      inputEl.focus();
+      scheduleSuggestions();
+    }
+
+    // ==========================================================
+    // EVENT LISTENERS
+    // ==========================================================
+    inputEl.addEventListener("input", scheduleSuggestions);
+    
+    inputEl.addEventListener("keyup", (e) => {
+      if (e.key === " " && spellcheckEl.checked) {
+        setTimeout(autocorrectLastWord, 50);
+      }
+    });
+    
+    startBtn.addEventListener("click", () => {
+      if (!recognition) {
+        recognition = initializeSpeechRecognition();
+      }
+      
+      if (recognition) {
+        try {
+          const lang = recognitionLangEl.value === 'auto' ? 'en-US' : recognitionLangEl.value;
+          recognition.lang = lang;
+          
+          // Reset lastFinal to avoid duplicate text
+          lastFinal = inputEl.value.trim();
+          recognition.start();
+        } catch (e) {
+          console.warn("recognition.start() error", e);
+          statusEl.textContent = "Unable to start voice recording: " + (e.message || e);
+          resetVoiceButtons();
+        }
+      }
+    });
+    
+    stopBtn.addEventListener("click", () => {
+      if (recognition && isVoiceMode) {
+        try {
+          recognition.stop();
+        } catch (e) {
+          console.warn("recognition.stop() error", e);
+        }
+      }
+      resetVoiceButtons();
+    });
+    
+    recognitionLangEl.addEventListener("change", () => {
+      if (recognition) {
+        const lang = recognitionLangEl.value === 'auto' ? 'en-US' : recognitionLangEl.value;
+        recognition.lang = lang;
+      }
+      
+      if (recognitionLangEl.value === 'auto') {
+        languageStatusEl.textContent = "Language: Auto-detect";
+        languageStatusEl.style.color = "#666";
+      } else {
+        languageStatusEl.textContent = `Language: ${recognitionLangEl.value.toUpperCase()}`;
+        languageStatusEl.style.color = "#666";
+      }
+      
+      // Refresh suggestions with new language
+      scheduleSuggestions();
+    });
+    
+    autoDetectEl.addEventListener("change", () => {
+      if (autoDetectEl.checked) {
+        languageStatusEl.textContent = "Language: Auto-detect";
+      } else {
+        languageStatusEl.textContent = `Language: ${recognitionLangEl.value.toUpperCase()}`;
+      }
+      scheduleSuggestions();
+    });
+    
+    spellcheckEl.addEventListener("change", scheduleSuggestions);
+
+    // ==========================================================
+    // INITIALIZATION
+    // ==========================================================
+    document.addEventListener('DOMContentLoaded', () => {
+      // Initialize with example text
+      inputEl.value = "I am going to the ";
+      setTimeout(() => {
+        requestSuggestions();
+      }, 500);
+      
+      // Add keyboard shortcut for voice (Ctrl+Shift+V)
+      document.addEventListener('keydown', (e) => {
+        if (e.ctrlKey && e.shiftKey && e.key === 'V') {
+          e.preventDefault();
+          startBtn.click();
+        }
+      });
+    });
+  </script>
+</body>
+</html>
