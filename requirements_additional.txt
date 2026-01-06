@@ -1,0 +1,7 @@
+langdetect==1.0.9
+jiwer==2.5.1
+language-tool-python==2.7.1
+pydantic==2.5.0
+fastapi==0.104.1
+uvicorn==0.24.0
+python-multipart==0.0.6
